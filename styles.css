@@ -13,6 +13,7 @@ body {
   background-color: #ecf0f1;
   flex-grow: 1;
   display: block;
+  position: relative;
 }
 
 #tower-panel {
@@ -34,20 +35,18 @@ body {
   width: 50px;
   height: 50px;
   margin: 10px 0;
-  cursor: pointer;
+  cursor: grab;
   border: 2px solid #fff;
   box-sizing: border-box;
   transition: transform 0.2s, border-color 0.2s;
 }
 
-.tower:hover {
-  transform: scale(1.1);
-  border-color: yellow;
+.tower:active {
+  cursor: grabbing;
 }
 
-.tower.selected {
-  border-color: yellow;
-  transform: scale(1.1);
+.tower.dragging {
+  opacity: 0.5;
 }
 
 #info {
