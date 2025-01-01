@@ -15,8 +15,6 @@ const projectiles = [];
 // Drag and Drop Variables
 let isDragging = false;
 let draggedTower = null;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
 let previewTower = null;
 
 // Define the path for enemies
@@ -32,7 +30,7 @@ const path = [
 // Handle tower selection via Drag and Drop
 document.querySelectorAll('.tower').forEach(tower => {
   tower.style.backgroundColor = tower.getAttribute('data-color');
-  
+
   tower.addEventListener('dragstart', (e) => {
     if (money < parseInt(tower.getAttribute('data-cost'))) {
       e.preventDefault();
@@ -43,9 +41,9 @@ document.querySelectorAll('.tower').forEach(tower => {
     draggedTower = {
       color: tower.getAttribute('data-color'),
       cost: parseInt(tower.getAttribute('data-cost')),
-      damage: 1 // As per user request, each projectile hit deducts one health
+      damage: 1 // Each projectile hit deducts one health
     };
-    
+
     // Create a preview tower following the cursor
     previewTower = {
       x: 0,
@@ -53,13 +51,13 @@ document.querySelectorAll('.tower').forEach(tower => {
       color: draggedTower.color,
       size: 30
     };
-    
+
     // Set drag image to a transparent image to hide default drag image
     const img = new Image();
     img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NkYGD4DwABBAEAiHzl/wAAAABJRU5ErkJggg==';
     e.dataTransfer.setDragImage(img, 0, 0);
   });
-  
+
   tower.addEventListener('dragend', () => {
     isDragging = false;
     draggedTower = null;
@@ -83,7 +81,7 @@ canvas.addEventListener('drop', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     // Check if the position is not on the path and not overlapping another tower
     if (!isOnPath(x, y) && !isTowerPlaced(x, y)) {
       towers.push({
@@ -100,7 +98,7 @@ canvas.addEventListener('drop', (e) => {
     } else {
       alert('Cannot place tower on the path or overlapping another tower.');
     }
-    
+
     // Reset dragging variables
     isDragging = false;
     draggedTower = null;
@@ -116,7 +114,7 @@ function updateDisplay() {
 
 // Function to check if a position is on the path
 function isOnPath(x, y) {
-  // Simple check: distance to any path segment
+  // Check distance to any path segment
   for (let i = 0; i < path.length - 1; i++) {
     const p1 = path[i];
     const p2 = path[i + 1];
@@ -138,7 +136,7 @@ function distanceToSegment(px, py, x1, y1, x2, y2) {
   const len_sq = C * C + D * D;
   let param = -1;
   if (len_sq !== 0) // in case of 0 length line
-      param = dot / len_sq;
+    param = dot / len_sq;
 
   let xx, yy;
 
@@ -179,7 +177,7 @@ function getFireRate(color) {
   }
 }
 
-// Enemy class
+// Enemy class with variable health based on color
 class Enemy {
   constructor() {
     this.path = path;
@@ -189,11 +187,11 @@ class Enemy {
     this.speed = 1;
     this.radius = 10;
     this.color = getRandomEnemyColor();
-    this.health = 1; // Each projectile hit deducts one health
+    this.health = getEnemyHealth(this.color);
     this.maxHealth = this.health;
-    this.damageToPlayer = 1; // Each enemy deducts one health
+    this.damageToPlayer = getEnemyDamage(this.color);
   }
-  
+
   move() {
     if (this.currentPathIndex < this.path.length -1 ) {
       const target = this.path[this.currentPathIndex +1];
@@ -210,7 +208,7 @@ class Enemy {
       }
     }
   }
-  
+
   draw() {
     // Draw enemy
     ctx.beginPath();
@@ -218,14 +216,15 @@ class Enemy {
     ctx.fillStyle = this.color;
     ctx.fill();
     ctx.closePath();
-    
-    // Health bar
+
+    // Health bar background
     ctx.beginPath();
     ctx.rect(this.x - 10, this.y - 20, 20, 4);
     ctx.fillStyle = 'red';
     ctx.fill();
     ctx.closePath();
-    
+
+    // Health bar foreground
     ctx.beginPath();
     ctx.rect(this.x - 10, this.y - 20, (this.health / this.maxHealth) * 20, 4);
     ctx.fillStyle = 'green';
@@ -244,7 +243,7 @@ class Projectile {
     this.radius = 4;
     this.damage = 1; // Each projectile hit deducts one health
   }
-  
+
   move() {
     const dx = this.target.x - this.x;
     const dy = this.target.y - this.y;
@@ -256,7 +255,7 @@ class Projectile {
     this.x += (dx / distance) * this.speed;
     this.y += (dy / distance) * this.speed;
   }
-  
+
   hit() {
     this.target.health -= this.damage;
     const index = projectiles.indexOf(this);
@@ -268,7 +267,7 @@ class Projectile {
       if (enemyIndex > -1) enemies.splice(enemyIndex, 1);
     }
   }
-  
+
   draw() {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI *2);
@@ -280,8 +279,32 @@ class Projectile {
 
 // Function to get random enemy color
 function getRandomEnemyColor() {
-  const colors = ['purple', 'orange', 'cyan', 'magenta', 'yellow'];
+  const colors = ['yellow', 'purple', 'orange', 'cyan', 'magenta'];
   return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// Function to get enemy health based on color
+function getEnemyHealth(color) {
+  switch(color) {
+    case 'yellow': return 5;
+    case 'purple': return 20;
+    case 'orange': return 10;
+    case 'cyan': return 15;
+    case 'magenta': return 25;
+    default: return 5;
+  }
+}
+
+// Function to get enemy damage to player based on color
+function getEnemyDamage(color) {
+  switch(color) {
+    case 'yellow': return 1;
+    case 'purple': return 2;
+    case 'orange': return 1;
+    case 'cyan': return 3;
+    case 'magenta': return 2;
+    default: return 1;
+  }
 }
 
 // Spawn enemies periodically
@@ -292,20 +315,20 @@ setInterval(() => {
 // Main game loop
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
   drawPath();
-  
+
   // Move and draw enemies
   enemies.forEach((enemy, enemyIndex) => {
     enemy.move();
     enemy.draw();
-    
+
     // Check if enemy has reached the end
-    if (enemy.currentPathIndex >= enemy.path.length -1) {
+    if (enemy.currentPathIndex >= path.length -1) {
       playerHealth -= enemy.damageToPlayer;
       updateDisplay();
       enemies.splice(enemyIndex, 1);
-      
+
       // Check for game over
       if (playerHealth <= 0) {
         alert('Game Over!');
@@ -313,19 +336,19 @@ function gameLoop() {
       }
     }
   });
-  
+
   // Move and draw projectiles
   projectiles.forEach((projectile, projIndex) => {
     projectile.move();
     projectile.draw();
   });
-  
+
   // Draw towers and handle shooting
   towers.forEach(tower => {
     // Draw tower
     ctx.fillStyle = tower.color;
     ctx.fillRect(tower.x -15, tower.y -15, 30, 30);
-    
+
     // Find enemies in range
     enemies.forEach(enemy => {
       const distance = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
@@ -337,7 +360,7 @@ function gameLoop() {
       }
     });
   });
-  
+
   // Draw preview tower if dragging
   if (previewTower) {
     ctx.beginPath();
@@ -350,7 +373,7 @@ function gameLoop() {
     ctx.globalAlpha = 1.0;
     ctx.closePath();
   }
-  
+
   requestAnimationFrame(gameLoop);
 }
 
