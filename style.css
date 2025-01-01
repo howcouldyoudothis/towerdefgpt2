@@ -6,28 +6,48 @@ body {
 
 #game-container {
   display: flex;
+  height: 100vh;
 }
 
-#sidebar {
-  width: 180px;
+#gameCanvas {
+  background-color: #ecf0f1;
+  flex-grow: 1;
+  display: block;
+}
+
+#tower-panel {
+  width: 200px;
   background-color: #2c3e50;
   color: white;
-  padding: 10px;
+  padding: 15px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-#sidebar h3 {
-  text-align: center;
+#tower-panel h3 {
   margin-bottom: 20px;
 }
 
 .tower {
   width: 50px;
   height: 50px;
-  margin: 10px auto;
+  margin: 10px 0;
   cursor: pointer;
   border: 2px solid #fff;
   box-sizing: border-box;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.tower:hover {
+  transform: scale(1.1);
+  border-color: yellow;
+}
+
+.tower.selected {
+  border-color: yellow;
+  transform: scale(1.1);
 }
 
 #info {
@@ -38,9 +58,4 @@ body {
 #money, #health {
   margin: 10px 0;
   font-size: 18px;
-}
-
-#gameCanvas {
-  background-color: #ecf0f1;
-  display: block;
 }
