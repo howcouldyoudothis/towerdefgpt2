@@ -1,9 +1,9 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const sidebar = document.getElementById('sidebar');
 const moneyDisplay = document.getElementById('money');
 const healthDisplay = document.getElementById('health');
+const towerPanel = document.getElementById('tower-panel');
 
 let money = 500;
 let playerHealth = 10;
