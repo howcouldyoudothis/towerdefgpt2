@@ -12,6 +12,13 @@ const towers = [];
 const enemies = [];
 const projectiles = [];
 
+// Drag and Drop Variables
+let isDragging = false;
+let draggedTower = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let previewTower = null;
+
 // Define the path for enemies
 const path = [
   {x: 0, y: 300},
@@ -22,25 +29,83 @@ const path = [
   {x: 800, y: 500}
 ];
 
-// Handle tower selection
+// Handle tower selection via Drag and Drop
 document.querySelectorAll('.tower').forEach(tower => {
   tower.style.backgroundColor = tower.getAttribute('data-color');
   
-  tower.addEventListener('click', () => {
-    const towerCost = parseInt(tower.getAttribute('data-cost'));
-    if (money >= towerCost) {
-      selectedTower = {
-        color: tower.getAttribute('data-color'),
-        cost: towerCost,
-        damage: getTowerDamage(tower.getAttribute('data-color'))
-      };
-      // Highlight selected tower
-      document.querySelectorAll('.tower').forEach(t => t.classList.remove('selected'));
-      tower.classList.add('selected');
-    } else {
+  tower.addEventListener('dragstart', (e) => {
+    if (money < parseInt(tower.getAttribute('data-cost'))) {
+      e.preventDefault();
       alert('Not enough money to purchase this tower.');
+      return;
     }
+    isDragging = true;
+    draggedTower = {
+      color: tower.getAttribute('data-color'),
+      cost: parseInt(tower.getAttribute('data-cost')),
+      damage: 1 // As per user request, each projectile hit deducts one health
+    };
+    
+    // Create a preview tower following the cursor
+    previewTower = {
+      x: 0,
+      y: 0,
+      color: draggedTower.color,
+      size: 30
+    };
+    
+    // Set drag image to a transparent image to hide default drag image
+    const img = new Image();
+    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NkYGD4DwABBAEAiHzl/wAAAABJRU5ErkJggg==';
+    e.dataTransfer.setDragImage(img, 0, 0);
   });
+  
+  tower.addEventListener('dragend', () => {
+    isDragging = false;
+    draggedTower = null;
+    previewTower = null;
+  });
+});
+
+// Handle canvas drag events
+canvas.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  if (isDragging && previewTower) {
+    const rect = canvas.getBoundingClientRect();
+    previewTower.x = e.clientX - rect.left;
+    previewTower.y = e.clientY - rect.top;
+  }
+});
+
+canvas.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (isDragging && draggedTower) {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check if the position is not on the path and not overlapping another tower
+    if (!isOnPath(x, y) && !isTowerPlaced(x, y)) {
+      towers.push({
+        x,
+        y,
+        color: draggedTower.color,
+        range: 100,
+        damage: 1, // Each projectile hit deducts one health
+        fireRate: getFireRate(draggedTower.color),
+        lastFire: 0
+      });
+      money -= draggedTower.cost;
+      updateDisplay();
+    } else {
+      alert('Cannot place tower on the path or overlapping another tower.');
+    }
+    
+    // Reset dragging variables
+    isDragging = false;
+    draggedTower = null;
+    previewTower = null;
+  }
 });
 
 // Update money and health display
@@ -48,38 +113,6 @@ function updateDisplay() {
   moneyDisplay.textContent = `Money: $${money}`;
   healthDisplay.textContent = `Health: ${playerHealth}`;
 }
-
-// Handle canvas clicks for tower placement
-canvas.addEventListener('click', (e) => {
-  if (selectedTower) {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Check if player has enough money
-    if (money >= selectedTower.cost) {
-      // Check if the position is not on the path and not overlapping another tower
-      if (!isOnPath(x, y) && !isTowerPlaced(x, y)) {
-        towers.push({
-          x,
-          y,
-          color: selectedTower.color,
-          range: 100,
-          damage: selectedTower.damage,
-          fireRate: getFireRate(selectedTower.color),
-          lastFire: 0
-        });
-        money -= selectedTower.cost;
-        updateDisplay();
-      } else {
-        alert('Cannot place tower on the path or overlapping another tower.');
-      }
-    }
-    // Deselect tower after placement attempt
-    selectedTower = null;
-    document.querySelectorAll('.tower').forEach(t => t.classList.remove('selected'));
-  }
-});
 
 // Function to check if a position is on the path
 function isOnPath(x, y) {
@@ -136,16 +169,6 @@ function isTowerPlaced(x, y) {
   return false;
 }
 
-// Function to get tower damage based on color
-function getTowerDamage(color) {
-  switch(color) {
-    case 'green': return 1;
-    case 'blue': return 2;
-    case 'red': return 3;
-    default: return 1;
-  }
-}
-
 // Function to get tower fire rate based on color
 function getFireRate(color) {
   switch(color) {
@@ -166,9 +189,9 @@ class Enemy {
     this.speed = 1;
     this.radius = 10;
     this.color = getRandomEnemyColor();
-    this.health = getEnemyHealth(this.color);
+    this.health = 1; // Each projectile hit deducts one health
     this.maxHealth = this.health;
-    this.damageToPlayer = getEnemyDamage(this.color);
+    this.damageToPlayer = 1; // Each enemy deducts one health
   }
   
   move() {
@@ -213,13 +236,13 @@ class Enemy {
 
 // Projectile class
 class Projectile {
-  constructor(x, y, target, damage) {
+  constructor(x, y, target) {
     this.x = x;
     this.y = y;
     this.target = target;
     this.speed = 5;
     this.radius = 4;
-    this.damage = damage;
+    this.damage = 1; // Each projectile hit deducts one health
   }
   
   move() {
@@ -259,30 +282,6 @@ class Projectile {
 function getRandomEnemyColor() {
   const colors = ['purple', 'orange', 'cyan', 'magenta', 'yellow'];
   return colors[Math.floor(Math.random() * colors.length)];
-}
-
-// Function to get enemy health based on color
-function getEnemyHealth(color) {
-  switch(color) {
-    case 'purple': return 5;
-    case 'orange': return 8;
-    case 'cyan': return 10;
-    case 'magenta': return 12;
-    case 'yellow': return 15;
-    default: return 5;
-  }
-}
-
-// Function to get enemy damage to player based on color
-function getEnemyDamage(color) {
-  switch(color) {
-    case 'purple': return 1;
-    case 'orange': return 2;
-    case 'cyan': return 3;
-    case 'magenta': return 4;
-    case 'yellow': return 5;
-    default: return 1;
-  }
 }
 
 // Spawn enemies periodically
@@ -327,24 +326,30 @@ function gameLoop() {
     ctx.fillStyle = tower.color;
     ctx.fillRect(tower.x -15, tower.y -15, 30, 30);
     
-    // Draw tower range (optional)
-    // ctx.beginPath();
-    // ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI * 2);
-    // ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-    // ctx.stroke();
-    // ctx.closePath();
-    
     // Find enemies in range
     enemies.forEach(enemy => {
       const distance = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
       if (distance <= tower.range) {
         if (Date.now() - tower.lastFire > tower.fireRate) {
-          projectiles.push(new Projectile(tower.x, tower.y, enemy, tower.damage));
+          projectiles.push(new Projectile(tower.x, tower.y, enemy));
           tower.lastFire = Date.now();
         }
       }
     });
   });
+  
+  // Draw preview tower if dragging
+  if (previewTower) {
+    ctx.beginPath();
+    ctx.arc(previewTower.x, previewTower.y, 15, 0, Math.PI *2);
+    ctx.fillStyle = previewTower.color;
+    ctx.fill();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+    ctx.closePath();
+  }
   
   requestAnimationFrame(gameLoop);
 }
@@ -361,9 +366,6 @@ function drawPath() {
   ctx.lineCap = 'round';
   ctx.stroke();
   ctx.closePath();
-  
-  // Reset the path line width for other drawings
-  ctx.lineWidth = 1;
 }
 
 // Initialize and start the game
